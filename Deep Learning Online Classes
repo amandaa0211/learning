@@ -1,0 +1,69 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sun May 19 00:45:16 2019
+
+@author: USER
+"""
+
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.datasets import load_breast_cancer
+import pandas as pd
+from sklearn.metrics import accuracy_score
+from sklearn.ensemble import RandomForestClassifier
+
+# load the breast_cancer dataset
+init_data = load_breast_cancer()
+(X, y) = load_breast_cancer(return_X_y=True)
+X = pd.DataFrame(data=X, columns=init_data['feature_names'])
+y = pd.DataFrame(data=y, columns=['label'])
+
+# split X into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=0)
+
+# Train a RandomForestClassifier as model 
+forest = RandomForestClassifier(criterion='entropy',
+                                n_estimators=200, 
+                                random_state=1,
+                               n_jobs=2)
+
+forest.fit(X_train, y_train)
+
+
+y_pred = forest.predict(X_test)
+
+
+# inline plotting instead of popping out
+#%matplotlib inline
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+importances = forest.feature_importances_
+# get sort indices in descending order
+indices = np.argsort(importances)[::-1]
+from sklearn.feature_selection import SelectFromModel
+
+# put prefitted RandomForestClassifier "forest" into SelectFromModel
+sfm = SelectFromModel(forest, threshold=0.117, prefit=True)
+Z_forest_alt = sfm.transform(X)
+
+
+
+X_new = pd.DataFrame(data=Z_forest_alt)
+
+# split X into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X_new, y, test_size=0.14, random_state=0)
+forest = RandomForestClassifier(criterion='entropy',
+                                n_estimators=200, 
+                                random_state=1,
+                               n_jobs=2)
+forest.fit(X_train, y_train)
+y_pred = forest.predict(X_test)
+#for f in range(Z_forest_alt.shape[1]): #mdf
+#    print("%2d) %-*s %f" % (f + 1, 30, 
+#                            X.columns.values[indices[f]], 
+##                            importances[indices[f]]))
+
+print('Accuracy: %.2f' % accuracy_score(y_test, y_pred))
+print('Accuracy per feature: %.2f' % (accuracy_score(y_test, y_pred)/X_new.shape[1]))
